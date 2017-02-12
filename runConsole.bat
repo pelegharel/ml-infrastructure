@@ -1,0 +1,1 @@
+sbt ~console -J-Xmx6G
