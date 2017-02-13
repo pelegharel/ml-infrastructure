@@ -11,7 +11,7 @@ import org.apache.commons.math3.transform.TransformType._
 object FFTExtractor extends Extractor {
   val powSize = 5
   val pointNum = 2 << powSize
-  val featureNum = 3
+  val featureNum = 2
 
   def getTransform = new FastFourierTransformer(STANDARD)
 

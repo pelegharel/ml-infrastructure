@@ -10,7 +10,7 @@ import scala.math._
 object XVelocityExtractor extends Extractor {
 
   val featureNames = List("x", "y", "z").flatMap { coord =>
-    List("max_speed_$coord", "min_speed_$coord", "avg_speed_$coord", "std_speed_$coord")
+    List(s"max_speed_$coord", s"min_speed_$coord", s"avg_speed_$coord", s"std_speed_$coord")
   }
 
   def getVelocities(track: List[Row]) = {
