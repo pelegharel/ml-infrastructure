@@ -11,12 +11,12 @@ import org.apache.commons.math3.transform.TransformType._
 object FFTExtractor extends Extractor {
   val powSize = 6
   val pointNum = 2 << powSize
-  val featureNum = 5
+  val featureNum = 3
 
   def getTransform = new FastFourierTransformer(STANDARD)
 
   val featureNames = List("x", "y", "z").flatMap { coord =>
-    (0 until featureNum * 2).map { i => s"fft_${coord}_$i" }.toList
+    (1 until featureNum * 2).map { i => s"fft_${coord}_$i" }.toList
   }
 
   def getTimeSeries(track: List[Row]) = {
@@ -33,6 +33,9 @@ object FFTExtractor extends Extractor {
   }
 
   def getFeatures(track: List[Row]): List[Double] = {
+    if (track.size < 10) {
+      return featureNames.map(_ => 0.0)
+    }
     val fft = new FastFourierTransformer(STANDARD)
 
     val points = getConstantNumPoints(track)
@@ -40,6 +43,7 @@ object FFTExtractor extends Extractor {
     List(points.map(_.getX), points.map(_.getY), points.map(_.getZ)).flatMap { coordSeries =>
       fft.transform(coordSeries.toArray, FORWARD).take(featureNum).
         flatMap(x => Seq(x.getImaginary, x.getReal)).
+        drop(1).
         toList
     }
   }

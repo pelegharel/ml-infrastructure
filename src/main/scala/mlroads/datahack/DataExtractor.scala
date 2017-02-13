@@ -24,9 +24,9 @@ object DataExtractor {
     }
   }
 
-  def getTracks(path: String) = {
+  def getTracks(path: String, filter: Boolean) = {
     extract(path)(_.toList.groupBy(_.trajIndex).
-      filter { case (_, track) => track.size >= 10 }.
+      filter { case (_, track) => !filter || track.size >= 10 }.
       mapValues(_.sortBy(_.timestamp))).toList
   }
 
@@ -39,17 +39,29 @@ object DataExtractor {
     (names, res)
   }
 
-  def getTrainData = getTracks(Data.pathOf("train.csv"))
-  def getTestData = getTracks(Data.pathOf("test.csv"))
+  def getTrainData = getTracks(Data.pathOf("train.csv"), false)
+  def getTestData = getTracks(Data.pathOf("test.csv"), false)
 
   def run = {
     Seq(getTrainData -> "featuresTrain.csv", getTestData -> "featuresTest.csv").foreach {
       case (data, fileName) =>
-        val (header, features) = extractFeatures(data, List(FFTExtractor))
+        val (header, features) = extractFeatures(data, List(
+          FFTExtractor,
+          PeakHeightExtractor,
+          TotalDistanceExtractor,
+          TotalDurationExtractor
+        ))
 
         Data.writeCsv(Data.pathOf(fileName), header: _*) { printer =>
           features.toList.foreach { f =>
-            printer.printRecord(f.toIterable.asJava)
+            val currLable = f.last match {
+              case 0 => "a"
+              case 1 => "b"
+              case 2 => "c"
+            }
+
+            val ff = f.dropRight(1) ::: currLable :: Nil
+            printer.printRecord(ff.toIterable.asJava)
           }
         }
     }
