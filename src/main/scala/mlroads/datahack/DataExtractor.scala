@@ -49,7 +49,8 @@ object DataExtractor {
           FFTExtractor,
           PeakHeightExtractor,
           TotalDistanceExtractor,
-          TotalDurationExtractor
+          TotalDurationExtractor,
+          ParabolaFitterExtractor
         ))
 
         Data.writeCsv(Data.pathOf(fileName), header: _*) { printer =>

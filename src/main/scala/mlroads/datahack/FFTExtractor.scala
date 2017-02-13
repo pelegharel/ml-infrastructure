@@ -9,7 +9,7 @@ import org.apache.commons.math3.transform.DftNormalization._
 import org.apache.commons.math3.transform.TransformType._
 
 object FFTExtractor extends Extractor {
-  val powSize = 6
+  val powSize = 5
   val pointNum = 2 << powSize
   val featureNum = 3
 
@@ -28,7 +28,7 @@ object FFTExtractor extends Extractor {
 
   def getConstantNumPoints(track: List[Row]) = {
     val ts = getTimeSeries(track)
-    val step = ts.totalDuration / (pointNum - 1)
+    val step = ts.totalDuration / (pointNum)
     ts((0 until pointNum).map(_ * step))
   }
 
