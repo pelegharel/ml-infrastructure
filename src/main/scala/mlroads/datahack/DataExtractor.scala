@@ -24,14 +24,16 @@ object DataExtractor {
   }
 
   def getTracks(path: String) = {
-    extract(path)(_.toList.groupBy(_.trajIndex).mapValues(_.sortBy(_.timestamp))).toList
+    extract(path)(_.toList.groupBy(_.trajIndex).
+      filter { case (_, track) => track.size >= 10 }.
+      mapValues(_.sortBy(_.timestamp))).toList
   }
 
   def extractFeatures(data: List[(Int, List[Row])], extractors: List[Extractor]) = {
-    val names = "id" :: extractors.flatMap(_.featureNames)
+    val names = "id" :: extractors.flatMap(_.featureNames) ::: "label" :: Nil
     val res = data.par.map {
       case (id, track) =>
-        id.toDouble :: extractors.par.flatMap(_.getFeatures(track)).toList
+        id.toDouble :: extractors.par.flatMap(_.getFeatures(track)).toList ::: track.head.label :: Nil
     }
     (names, res)
   }
@@ -39,8 +41,8 @@ object DataExtractor {
   def getData = getTracks(Data.pathOf("train.csv"))
 
   def run = {
-    val data = getTracks(Data.pathOf("train.csv"))
-    val (header, features) = extractFeatures(data, List(SampleExtractor))
+    val data = getData
+    val (header, features) = extractFeatures(data, List(FFTExtractor))
 
     Data.writeCsv(Data.pathOf("res.csv"), header: _*) { printer =>
       features.toList.foreach { f =>
