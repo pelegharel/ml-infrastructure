@@ -11,6 +11,6 @@ object TimeCategoryExtractor extends Extractor {
     val zone = java.time.ZonedDateTime.now.getZone
     val hour = track.map(x => x.timestamp.atZone(zone).getHour).head
 
-    List(hour / 6)
+    List(hour.toDouble / 24)
   }
 }

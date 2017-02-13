@@ -47,10 +47,8 @@ object DataExtractor {
       case (data, fileName) =>
         val (header, features) = extractFeatures(data, List(
           FFTExtractor,
-          PeakHeightExtractor,
-          TotalDistanceExtractor,
-          TotalDurationExtractor,
-          ParabolaFitterExtractor
+          ParabolaFitterExtractor,
+          TimeCategoryExtractor
         ))
 
         Data.writeCsv(Data.pathOf(fileName), header: _*) { printer =>
