@@ -10,7 +10,7 @@ object TotalDurationExtractor extends Extractor {
       track.last.timestamp
     ).toMillis
     if (totalDuration > 0) {
-      List(1000.0 / totalDuration)
+      List(totalDuration / 1000.0)
     } else {
       List(0.0)
     }
