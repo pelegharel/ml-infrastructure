@@ -10,7 +10,7 @@ object DataExtractor {
 
   def extract[A](path: String)(extractor: Iterator[Row] => A) = {
     Data.extractCsv(path)(fields: _*) { it =>
-      val mapped = it.map(r =>
+      val mapped = it.map { r =>
         Row(
           r(0).toInt,
           Instant.parse(r(1).updated(10, 'T') + 'Z'),
@@ -18,7 +18,8 @@ object DataExtractor {
           r(3).toDouble,
           r(4).toDouble,
           r(5).toDouble
-        ))
+        )
+      }
       extractor(mapped)
     }
   }
@@ -38,18 +39,20 @@ object DataExtractor {
     (names, res)
   }
 
-  def getData = getTracks(Data.pathOf("train.csv"))
+  def getTrainData = getTracks(Data.pathOf("train.csv"))
+  def getTestData = getTracks(Data.pathOf("test.csv"))
 
   def run = {
-    val data = getData
-    val (header, features) = extractFeatures(data, List(FFTExtractor))
+    Seq(getTrainData -> "featuresTrain.csv", getTestData -> "featuresTest.csv").foreach {
+      case (data, fileName) =>
+        val (header, features) = extractFeatures(data, List(FFTExtractor))
 
-    Data.writeCsv(Data.pathOf("res.csv"), header: _*) { printer =>
-      features.toList.foreach { f =>
-        printer.printRecord(f.toIterable.asJava)
-      }
+        Data.writeCsv(Data.pathOf(fileName), header: _*) { printer =>
+          features.toList.foreach { f =>
+            printer.printRecord(f.toIterable.asJava)
+          }
+        }
     }
 
-    (header, features)
   }
 }
