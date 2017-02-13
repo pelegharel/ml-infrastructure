@@ -26,7 +26,7 @@ object Data {
   def all(path: String) = loan(getParser(path)) to (_.getRecords())
   def extract[A](path: String)(extractor: CSVParser => A) = loan(getParser(path)) to (extractor(_))
 
-  def extractCsv[A](path: String, fields: Array[String])(extractor: Iterator[Array[String]] => A): A =
+  def extractCsv[A](path: String)(fields: String*)(extractor: Iterator[Array[String]] => A): A =
     loan(new FileInputStream(path)) to { inputStream =>
       val settings = new CsvParserSettings()
       settings.setHeaderExtractionEnabled(true)
