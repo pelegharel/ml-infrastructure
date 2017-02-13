@@ -1,6 +1,10 @@
 package mlroads.datahack
 import mlroads.core.Data
 import java.time.Instant
+import java.time.Duration
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+
 object DataExtractor {
   def fields = List("label", "time_stamp", "traj_ind", "x", "y", "z")
 
@@ -27,13 +31,23 @@ object DataExtractor {
     val names = "id" :: extractors.flatMap(_.featureNames)
     val res = data.par.map {
       case (id, track) =>
-        id :: extractors.par.flatMap(_.getFeatures(track)).toList
+        id.toDouble :: extractors.par.flatMap(_.getFeatures(track)).toList
     }
     (names, res)
   }
 
+  def getData = getTracks(Data.pathOf("train.csv"))
+
   def run = {
     val data = getTracks(Data.pathOf("train.csv"))
-    extractFeatures(data, List(SampleExtractor))
+    val (header, features) = extractFeatures(data, List(SampleExtractor))
+
+    Data.writeCsv(Data.pathOf("res.csv"), header: _*) { printer =>
+      features.toList.foreach { f =>
+        printer.printRecord(f.toIterable.asJava)
+      }
+    }
+
+    (header, features)
   }
 }
