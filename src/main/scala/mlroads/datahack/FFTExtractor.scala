@@ -1,6 +1,6 @@
 package mlroads.datahack
 import java.time.Duration
-import org.apache.commons.math3.geometry.euclidean.threed.Vector3D
+import org.apache.commons.math3.geometry.euclidean.threed.{ Vector3D, Rotation }
 import mlroads.core.time.TimeSeries
 import mlroads.core.math.MathOps._
 import mlroads.core.time.TimeOps._
