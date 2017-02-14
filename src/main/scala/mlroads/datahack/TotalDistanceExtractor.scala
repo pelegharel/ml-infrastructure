@@ -13,6 +13,6 @@ object TotalDistanceExtractor extends Extractor {
     val xDiff = xLast - xHead
     val yDiff = yLast - yHead
 
-    List(Math.sqrt(Math.pow(2, xDiff) + Math.pow(2, yDiff)), track.size.toDouble / 100)
+    List(Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2)), track.size.toDouble)
   }
 }
