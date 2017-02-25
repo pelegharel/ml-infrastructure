@@ -1,9 +1,9 @@
-package mlroads.core.time
+package ml.core.time
 
 import java.time.Duration
-import mlroads.core.time.TimeOps._
-import mlroads._
-import mlroads.core._
+import ml.core.time.TimeOps._
+import ml._
+import ml.core._
 
 class TimeSeries[A <% VectorLike[A]] private[TimeSeries] (series: Array[(Duration, A)]) {
 

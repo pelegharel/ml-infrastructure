@@ -1,4 +1,4 @@
-package mlroads.core
+package ml.core.math
 
 trait VectorLike[A] {
   def +(that: A): A
