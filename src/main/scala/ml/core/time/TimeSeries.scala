@@ -3,6 +3,7 @@ package ml.core.time
 import java.time.Duration
 import ml.core.time.TimeOps._
 import ml._
+import ml.core.math.VectorLike
 import ml.core._
 
 class TimeSeries[A <% VectorLike[A]] private[TimeSeries] (series: Array[(Duration, A)]) {

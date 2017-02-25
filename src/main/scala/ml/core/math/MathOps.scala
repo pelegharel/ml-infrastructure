@@ -2,7 +2,6 @@ package ml.core.math
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D
 import org.apache.commons.math3.complex.Complex
-import ml.core.math.VectorLike
 import scala.language.implicitConversions
 
 object MathOps {
