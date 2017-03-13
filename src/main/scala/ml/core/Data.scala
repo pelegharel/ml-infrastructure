@@ -9,7 +9,7 @@ import com.esotericsoftware.kryo.Kryo
 import weka.core.converters._
 import weka.core._
 import com.univocity.parsers.csv.{
-  CsvParser => UniCsvParser,
+  CsvParser,
   CsvWriter,
   CsvWriterSettings,
   CsvParserSettings
@@ -30,7 +30,7 @@ object Data {
       val settings = new CsvParserSettings()
       settings.setHeaderExtractionEnabled(true)
       settings.selectFields(fields: _*)
-      val parser = new UniCsvParser(settings)
+      val parser = new CsvParser(settings)
       parser.beginParsing(inputStream)
 
       try {
@@ -42,11 +42,7 @@ object Data {
       }
     }
 
-  def writeCsv[A](path: String, header: String*)(action: CSVPrinter => A) = loan(new PrintWriter(path)) to { w =>
-    loan(CSVFormat.DEFAULT.withHeader(header: _*).print(w)) to (action(_))
-  }
-
-  def writeCsv[A](path: String)(header: String*)(data: Iterator[Seq[Any]]): Unit =
+  def writeCsv(path: String)(header: String*)(data: Iterator[Seq[Any]]): Unit =
     loan(new FileOutputStream(path, false)) to { outputStream =>
       val writer = new CsvWriter(outputStream, new CsvWriterSettings());
       writer.writeHeaders(header.asJava)
