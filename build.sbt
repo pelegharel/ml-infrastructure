@@ -1,7 +1,4 @@
-val akkaV = "2.3.9"
-val sprayV = "1.3.3"
-
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.3"
 
 libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-csv" % "1.1",
