@@ -25,7 +25,7 @@ object Data {
   private val basePath = new File(".").getCanonicalPath + "/data/"
   def pathOf(name: String) = s"${basePath}${name}"
 
-  def extractCsv[A](path: String)(fields: String*)(extractor: Iterator[Array[String]] => A): A =
+  def extractCsv[A](path: String)(fields: String*)(extractor: Iterator[Seq[String]] => A): A =
     loan(new FileInputStream(path)) to { inputStream =>
       val settings = new CsvParserSettings()
       settings.setHeaderExtractionEnabled(true)
@@ -35,6 +35,7 @@ object Data {
 
       try {
         val iterator = Iterator.continually(parser.parseNext).
+          map(_.toSeq).
           takeWhile(_ != null)
         extractor(iterator)
       } finally {
