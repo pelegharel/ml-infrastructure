@@ -1,5 +1,10 @@
 package ml.core
 import scala.util.Try
+  
+trait Extractor[A] {
+  val header: Seq[String]
+  def extract(rowGroup: Seq[A]): Seq[Any]
+}
 
 object FeatureExtractor {
   def extractFeatures[Key, Row](
@@ -7,33 +12,30 @@ object FeatureExtractor {
     writer: (Seq[String]) => (Iterator[Seq[Any]] => Unit),
     key: (Seq[String] => Key),
     row: (Seq[String] => Row))(
-    features: (Seq[String], Seq[Row] => Seq[Any])*) = {
-
-    val featuresHeader = features.flatMap(_._1)
-    val featureExtractors = features.map(_._2)
-
-    val writerWithHeaders = writer(featuresHeader)
+    features: Extractor[Row]*) = {
 
     extractor { it =>
-      val buffered = it.map(x => key(x) -> row(x)).buffered
 
-      val gropuedIt = Iterator.continually {
-        Try({
-          val (currKey, _) = buffered.head
+      val gropuedIt = {
+        val buffered = it.map(x => key(x) -> row(x)).buffered
 
-          buffered.takeWhile {
-            case (key, _) => key == currKey
-          }.map {
-            case (_, row) => row
-          }.toList
-        })
-      }.takeWhile(_.isSuccess).map(_.get)
-
-      val featuresIt = gropuedIt.map { rows =>
-        featureExtractors.flatMap(_(rows))
+        Iterator.continually {
+          Try({
+            val (currKey, _) = buffered.head
+            buffered.takeWhile {
+              case (key, _) => key == currKey
+            }.map {
+              case (_, row) => row
+            }.toList
+          })
+        }.takeWhile(_.isSuccess).map(_.get)
       }
 
-      writerWithHeaders(featuresIt)
+      val featuresIt = gropuedIt.map { rows =>
+        features.flatMap(_.extract(rows))
+      }       
+
+      writer(features.flatMap(_.header))(featuresIt)
     }
 
   }
