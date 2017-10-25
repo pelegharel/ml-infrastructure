@@ -7,7 +7,8 @@ libraryDependencies ++= Seq(
   "net.java.truecommons" % "truecommons-shed" % "2.5.0",
   "nz.ac.waikato.cms.weka" % "weka-stable" % "3.6.13",
   "com.esotericsoftware" % "kryo" % "3.0.3",
-  "com.univocity" % "univocity-parsers" % "2.0.0"
+  "com.univocity" % "univocity-parsers" % "2.0.0",
+  "net.sourceforge" % "jwbf" % "3.1.1"
   )
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")

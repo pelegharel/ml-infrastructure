@@ -1,6 +1,6 @@
 package ml.core
 import scala.util.Try
-  
+
 trait Extractor[A] {
   val header: Seq[String]
   def extract(rowGroup: Seq[A]): Seq[Any]
@@ -33,7 +33,7 @@ object FeatureExtractor {
 
       val featuresIt = gropuedIt.map { rows =>
         features.flatMap(_.extract(rows))
-      }       
+      }
 
       writer(features.flatMap(_.header))(featuresIt)
     }
