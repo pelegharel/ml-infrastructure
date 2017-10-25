@@ -8,7 +8,11 @@ libraryDependencies ++= Seq(
   "nz.ac.waikato.cms.weka" % "weka-stable" % "3.6.13",
   "com.esotericsoftware" % "kryo" % "3.0.3",
   "com.univocity" % "univocity-parsers" % "2.0.0",
-  "net.sourceforge" % "jwbf" % "3.1.1"
+  "net.sourceforge" % "jwbf" % "3.1.1",
+  "com.atlassian.commonmark" % "commonmark" % "0.10.0",
+  "org.jsoup" % "jsoup" % "1.10.3",
+  "edu.stanford.nlp" % "stanford-corenlp" % "3.8.0",
+  "edu.stanford.nlp" % "stanford-corenlp" % "3.8.0" classifier "models"
   )
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
