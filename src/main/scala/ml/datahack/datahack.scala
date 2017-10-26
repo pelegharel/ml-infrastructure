@@ -65,22 +65,19 @@ object DataHack {
   }
 
   lazy val data = Data.extractCsv(Data.pathOf("train.csv"))("entity", "disambig_term", "text", "wikipedia_link") { it =>
-    it.
-      take(6080).
-      map {
-        case Seq(entity, disambig_term, text, url) =>
-          Row(
-            entity,
-            disambig_term,
-            text,
-            url,
-            Option(url).map(_.split("/").last))
-      }.
-      toList
+    it.map {
+      case Seq(entity, disambig_term, text, url) =>
+        Row(
+          entity,
+          disambig_term,
+          text,
+          url,
+          Option(url).map(_.split("/").last))
+    }.toList
   }
 
   lazy val dataWithText = Data.extractCsv(Data.pathOf("withWikiShorts.csv"))("entity", "disambig_term", "text", "url", "articleName", "wikiText") { it =>
-    it.take(6080).map {
+    it.map {
       case Seq(entity, disambig_term, text, url, _, wikiText) =>
         RowWithText(
           entity = entity,
@@ -107,7 +104,7 @@ object DataHack {
       Seq(
         "entity" -> JsString(line.entity),
         "disambig_term" -> JsString(line.disambig_term),
-        "text" -> Json.toJsObject(createHist(importantWords(line.text))),
+        "text" -> Json.toJsObject(createHist(importantWords(line.text).map(_.toLowerCase))),
         "wikiText" -> Json.toJsObject(createHist(sents.flatMap(importantWords)))) ++
         line.url.map(x => "url" -> JsString(x)))
   }

@@ -19,6 +19,7 @@ import java.io.{ FileInputStream, FileOutputStream, File }
 import ml._
 import ml.core._
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object Data {
 
@@ -35,9 +36,11 @@ object Data {
       parser.beginParsing(inputStream)
 
       try {
-        val iterator = Iterator.continually(parser.parseNext).
-          map(_.toSeq).
-          takeWhile(_ != null)
+        val iterator = Iterator.continually(Try(parser.parseNext())).
+          takeWhile(x => x.isSuccess && x.get != null).
+          map(_.get).
+          map(_.toSeq)
+
         extractor(iterator)
       } finally {
         parser.stopParsing()
