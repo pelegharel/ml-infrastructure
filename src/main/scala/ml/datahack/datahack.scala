@@ -5,6 +5,9 @@ import edu.stanford.nlp.simple.Sentence
 import scala.collection.JavaConverters._
 import play.api.libs.json._
 import scala.io.Source
+import scala.util.Try
+import scala.concurrent.duration._
+import scala.concurrent.{ Future, Await }
 
 case class Row(
   entity: String,
@@ -26,12 +29,32 @@ object DataHack {
 
   def wikiText(article: String) = bot.getArticle(article).getText
 
-  def wikiUrl(article: String) = s"https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=$article"
+  def wikiUrl(articleRaw: String) = {
+    val article = java.net.URLEncoder.encode(articleRaw, java.nio.charset.StandardCharsets.UTF_8.toString)
+    s"https://en.wikipedia.org/w/api.php?format=json&action=query&maxlag=600&prop=extracts&exintro=&explaintext=&titles=$article"
+  }
 
-  def wikiTextShort(article: String) = {
-    val raw = Source.fromURL(wikiUrl(article)).getLines.toList.head
-    val extract = Json.parse(raw) \\ "extract"
-    extract.headOption.map(Json.stringify)
+  def wikiTextShort(article: Seq[String]) = {
+    val src = Source.fromURL(wikiUrl(article.mkString("|")))
+    val raw = src.getLines.toList.head
+    src.close()
+    Try {
+      val extract = Json.parse(raw)
+      val JsObject(aaa) = extract("query")("pages")
+      aaa.values.map(x => Json.stringify(x("title")) -> Json.stringify(x("extract"))).toMap
+    }.toOption.getOrElse(Map.empty)
+  }
+
+  def saveWikiText(it: Iterator[LabaledTrain], saveName: String) = {
+    val withText = it.grouped(100).flatMap { l =>
+      val extractedText = wikiTextShort(l.map(_.article_name))
+      l.map(x => x -> extractedText.get(x.article_name))
+    }.map {
+      case (row, txt) => row.productIterator.toSeq :+ txt.getOrElse(null)
+    }
+
+    Data.writeCsv(Data.pathOf(saveName))(
+      "entity", "disambig_term", "text", "article_name", "real_article", "wikiTest")(withText.toIterator)
   }
 
   def sentences(text: String) = {
@@ -61,7 +84,8 @@ object DataHack {
         case (tag, _) =>
           badTags.contains(tag)
       }.
-      map(_._2)
+      map(_._2.filter(_.isLetter)).
+      filterNot(_.isEmpty)
   }
 
   lazy val data = Data.extractCsv(Data.pathOf("train.csv"))("entity", "disambig_term", "text", "wikipedia_link") { it =>
@@ -76,17 +100,38 @@ object DataHack {
     }.toList
   }
 
-  lazy val dataWithText = Data.extractCsv(Data.pathOf("withWikiShorts.csv"))("entity", "disambig_term", "text", "url", "articleName", "wikiText") { it =>
-    it.map {
-      case Seq(entity, disambig_term, text, url, _, wikiText) =>
-        RowWithText(
-          entity = entity,
-          disambig_term = disambig_term,
-          text = text,
-          url = Option(url),
-          wikiText = Option(wikiText))
-    }.toList
-  }
+  lazy val dataWithText = Data.extractCsv(Data.pathOf("withWikiShorts.csv"))(
+    "entity",
+    "disambig_term",
+    "text",
+    "url",
+    "articleName",
+    "wikiText") { it =>
+      it.map {
+        case Seq(entity, disambig_term, text, url, _, wikiText) =>
+          RowWithText(
+            entity = entity,
+            disambig_term = disambig_term,
+            text = text,
+            url = Option(url),
+            wikiText = Option(wikiText))
+      }.toList
+    }
+
+  // def saveHistCsv(saveName: String, it: Iterator[LabaledTrain]) = {
+  //   val writer = Data.writeCsv(Data.pathOf(saveName))(
+  //     "entity", "disambig_term", "text", "article_name",
+  //     "real_article", "label",
+  //     "textHist",
+  //     "wikiHist")(
+  //       it.map { r =>
+  //         val (textHist, wikiHist) =
+  //           extractWordHist(Sample(r.entity, r.disambig_term, r.text, r.article_name))
+  //         val textHistJ = Json.toJson(textHist)
+  //         val wikiHistJ = Json.toJson(wikiHist)
+  //         r.productIterator.toSeq ++ Seq(textHistJ, wikiHistJ)
+  //       })
+  // }
 
   lazy val definitions = Data.extractCsv(Data.pathOf("dis.csv"))("entity", "definition") {
     it =>
@@ -112,13 +157,44 @@ object DataHack {
     Data.writeCsv(Data.pathOf("labeledTrain.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label")(saveData)
   }
 
+  case class Sample(entity: String, disambig_term: String, text: String, article_name: String)
+  // def extractWordHist(sample: Sample) = {
+  //   val removeTerms = Set(sample.entity, sample.disambig_term)
+  //   val wikiText = wikiTextShort(sample.article_name)
+  //   val scentenseWords = createHist(importantWords(sample.text).map(_.toLowerCase), removeTerms)
+
+  //   val sents = wikiText.map(sentences(_).toSeq).getOrElse(Seq.empty)
+  //   val wikiWords = createHist(sents.flatMap(importantWords), removeTerms)
+  //   (scentenseWords, wikiWords)
+  // }
+
+  case class LabaledTrain(entity: String, disambig_term: String, text: String, article_name: String, real_article: Option[String], label: Boolean)
+
+  lazy val labeledData = Data.extractCsv(Data.pathOf("labeledTrain.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label") {
+    it =>
+      it.map {
+        case Seq(entity, disambig_term, text, article_name, real_article, label) =>
+          LabaledTrain(entity, disambig_term, text, article_name, Option(real_article), label.toBoolean)
+      }.toList
+  }
+
+  def createHist(words: Seq[String], removeTerms: Set[String]) = {
+    words.
+      groupBy(identity).
+      mapValues(_.length).
+      filterKeys(k =>
+        !(removeTerms.
+          map(_.toLowerCase).
+          contains(k)))
+  }
+
   def extract(line: RowWithText) = {
-    def createHist(words: Seq[String]) = {
+    def createHist(words: Seq[String], removeTerms: Set[String]) = {
       Option(words).map(_.
         groupBy(identity).
         mapValues(_.length).
         filterKeys(k =>
-          !(Set(line.entity, line.disambig_term).
+          !(removeTerms.
             map(_.toLowerCase).
             contains(k)))).getOrElse(Map.empty)
     }
@@ -128,8 +204,8 @@ object DataHack {
       Seq(
         "entity" -> JsString(line.entity),
         "disambig_term" -> JsString(line.disambig_term),
-        "text" -> Json.toJsObject(createHist(importantWords(line.text).map(_.toLowerCase))),
-        "wikiText" -> Json.toJsObject(createHist(sents.flatMap(importantWords)))) ++
+        "text" -> Json.toJsObject(createHist(importantWords(line.text).map(_.toLowerCase), Set(line.entity, line.disambig_term))),
+        "wikiText" -> Json.toJsObject(createHist(sents.flatMap(importantWords), Set(line.entity, line.disambig_term)))) ++
         line.url.map(x => "url" -> JsString(x)))
   }
 }
