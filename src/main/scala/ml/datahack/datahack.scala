@@ -32,7 +32,7 @@ object DataHack {
   def wikiTextShort(article: String) = {
     val raw = Source.fromURL(wikiUrl(article)).getLines.toList.head
     val extract = Json.parse(raw) \\ "extract"
-    Json.stringify(extract.head)
+    extract.headOption.map(Json.stringify)
   }
 
   def sentences(text: String) = {
