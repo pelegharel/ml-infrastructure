@@ -12,7 +12,8 @@ libraryDependencies ++= Seq(
   "com.atlassian.commonmark" % "commonmark" % "0.10.0",
   "org.jsoup" % "jsoup" % "1.10.3",
   "edu.stanford.nlp" % "stanford-corenlp" % "3.8.0",
-  "edu.stanford.nlp" % "stanford-corenlp" % "3.8.0" classifier "models"
+  "edu.stanford.nlp" % "stanford-corenlp" % "3.8.0" classifier "models",
+  "com.typesafe.play" % "play-json_2.12" % "2.6.6"
   )
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
