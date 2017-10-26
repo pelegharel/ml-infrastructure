@@ -29,6 +29,7 @@ object Data {
     loan(new FileInputStream(path)) to { inputStream =>
       val settings = new CsvParserSettings()
       settings.setHeaderExtractionEnabled(true)
+      settings.setMaxCharsPerColumn(409600)
       settings.selectFields(fields: _*)
       val parser = new CsvParser(settings)
       parser.beginParsing(inputStream)
