@@ -88,6 +88,30 @@ object DataHack {
     }.toList
   }
 
+  lazy val definitions = Data.extractCsv(Data.pathOf("dis.csv"))("entity", "definition") {
+    it =>
+      it.toSeq.view.
+        map { case Seq(a, b) => (a, b) }.
+        groupBy(_._1).
+        mapValues(_.map(_._2))
+  }
+
+  def enrichRow(row: Row) =
+    definitions.get(row.disambig_term).map {
+      _.map { d =>
+        (d, row, row.articleName.filter(_ == d).isDefined)
+      }
+    }.getOrElse(Seq.empty)
+
+  def getEnrichedData(rows: Iterator[Row]) = {
+    val withLabel = rows.flatMap(enrichRow)
+    val saveData = withLabel.map {
+      case (term, row, label) =>
+        Seq(row.entity, row.disambig_term, row.text, term, row.articleName.getOrElse(null), label)
+    }
+    Data.writeCsv(Data.pathOf("labeledTrain.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label")(saveData)
+  }
+
   def extract(line: RowWithText) = {
     def createHist(words: Seq[String]) = {
       Option(words).map(_.
