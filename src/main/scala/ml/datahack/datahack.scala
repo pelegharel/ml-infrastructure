@@ -3,7 +3,7 @@ package ml.datahack
 import ml.core.Data
 import edu.stanford.nlp.simple.Sentence
 import scala.collection.JavaConverters._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import scala.io.Source
 
 case class Row(
@@ -16,10 +16,9 @@ case class Row(
 case class RowWithText(
   entity: String,
   disambig_term: String,
-  articleName: String,
   text: String,
-  url: String,
-  wikiText: String)
+  url: Option[String],
+  wikiText: Option[String])
 
 object DataHack {
 
@@ -80,6 +79,18 @@ object DataHack {
       toList
   }
 
+  lazy val dataWithText = Data.extractCsv(Data.pathOf("withWikiShorts.csv"))("entity", "disambig_term", "text", "url", "articleName", "wikiText") { it =>
+    it.take(6080).map {
+      case Seq(entity, disambig_term, text, url, _, wikiText) =>
+        RowWithText(
+          entity = entity,
+          disambig_term = disambig_term,
+          text = text,
+          url = Option(url),
+          wikiText = Option(wikiText))
+    }.toList
+  }
+
   def extract(line: RowWithText) = {
     def createHist(words: Seq[String]) = {
       Option(words).map(_.
@@ -91,13 +102,13 @@ object DataHack {
             contains(k)))).getOrElse(Map.empty)
     }
 
-    val sents = Option(line.wikiText).map(sentences(_).toSeq).getOrElse(Seq.empty)
-    Map(
-      "entity" -> line.entity,
-      "disambig_term" -> line.disambig_term,
-      "articleName" -> line.articleName,
-      "url" -> line.url,
-      "text" -> createHist(importantWords(line.text)),
-      "wikiText" -> createHist(sents.flatMap(importantWords)))
+    val sents = line.wikiText.map(sentences(_).toSeq).getOrElse(Seq.empty)
+    JsObject(
+      Seq(
+        "entity" -> JsString(line.entity),
+        "disambig_term" -> JsString(line.disambig_term),
+        "text" -> Json.toJsObject(createHist(importantWords(line.text))),
+        "wikiText" -> Json.toJsObject(createHist(sents.flatMap(importantWords)))) ++
+        line.url.map(x => "url" -> JsString(x)))
   }
 }
