@@ -4,6 +4,7 @@ import ml.core.Data
 import edu.stanford.nlp.simple.Sentence
 import scala.collection.JavaConverters._
 import play.api.libs.json.Json
+import scala.io.Source
 
 case class Row(
   entity: String,
@@ -25,6 +26,14 @@ object DataHack {
   lazy val bot = new net.sourceforge.jwbf.mediawiki.bots.MediaWikiBot("https://en.wikipedia.org/w/")
 
   def wikiText(article: String) = bot.getArticle(article).getText
+
+  def wikiUrl(article: String) = s"https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=$article"
+
+  def wikiTextShort(article: String) = {
+    val raw = Source.fromURL(wikiUrl(article)).getLines.toList.head
+    val extract = Json.parse(raw) \\ "extract"
+    Json.stringify(extract.head)
+  }
 
   def sentences(text: String) = {
     val wordFilters = Seq('{', '\\', '<', '>', '_')
