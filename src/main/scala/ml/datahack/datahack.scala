@@ -41,13 +41,15 @@ object DataHack {
     Try {
       val extract = Json.parse(raw)
       val JsObject(aaa) = extract("query")("pages")
-      aaa.values.map(x => Json.stringify(x("title")) -> Json.stringify(x("extract"))).toMap
+      aaa.values.flatMap(x => Try(Json.stringify(x("title")) -> Json.stringify(x("extract"))).toOption).toMap.
+        map { case (k, v) => k.replace(" ", "_").replace("\"", "") -> v }
     }.toOption.getOrElse(Map.empty)
   }
 
   def saveWikiText(it: Iterator[LabaledTrain], saveName: String) = {
-    val withText = it.grouped(100).flatMap { l =>
+    val withText = it.grouped(20).flatMap { l =>
       val extractedText = wikiTextShort(l.map(_.article_name))
+      println(extractedText.size)
       l.map(x => x -> extractedText.get(x.article_name))
     }.map {
       case (row, txt) => row.productIterator.toSeq :+ txt.getOrElse(null)
