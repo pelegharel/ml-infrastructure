@@ -56,7 +56,8 @@ object DataHack {
     }
 
     Data.writeCsv(Data.pathOf(saveName))(
-      "entity", "disambig_term", "text", "article_name", "real_article", "wikiTest")(withText.toIterator)
+
+      "entity", "disambig_term", "text", "article_name", "real_article", "label", "wikiTest")(withText.toIterator)
   }
 
   def sentences(text: String) = {
@@ -120,20 +121,20 @@ object DataHack {
       }.toList
     }
 
-  // def saveHistCsv(saveName: String, it: Iterator[LabaledTrain]) = {
-  //   val writer = Data.writeCsv(Data.pathOf(saveName))(
-  //     "entity", "disambig_term", "text", "article_name",
-  //     "real_article", "label",
-  //     "textHist",
-  //     "wikiHist")(
-  //       it.map { r =>
-  //         val (textHist, wikiHist) =
-  //           extractWordHist(Sample(r.entity, r.disambig_term, r.text, r.article_name))
-  //         val textHistJ = Json.toJson(textHist)
-  //         val wikiHistJ = Json.toJson(wikiHist)
-  //         r.productIterator.toSeq ++ Seq(textHistJ, wikiHistJ)
-  //       })
-  // }
+  def saveHistCsv(saveName: String, it: Iterator[(LabaledTrain, Option[String])]) = {
+    val writer = Data.writeCsv(Data.pathOf(saveName))(
+      "entity", "disambig_term", "text", "article_name", "real_article", "label",
+      "textHist",
+      "wikiHist")(
+        it.map {
+          case (r, txt) =>
+            val (textHist, wikiHist) =
+              extractWordHist(Sample(r.entity, r.disambig_term, r.text, r.article_name, txt))
+            val textHistJ = Json.toJson(textHist)
+            val wikiHistJ = Json.toJson(wikiHist)
+            r.productIterator.toSeq ++ Seq(textHistJ, wikiHistJ)
+        })
+  }
 
   lazy val definitions = Data.extractCsv(Data.pathOf("dis.csv"))("entity", "definition") {
     it =>
@@ -150,29 +151,44 @@ object DataHack {
       }
     }.getOrElse(Seq.empty)
 
-  def getEnrichedData(rows: Iterator[Row]) = {
+  lazy val testAsRows = {
+    Data.extractCsv(Data.pathOf("testData.csv"))("entity", "disambig_term", "text") {
+      it =>
+        it.map {
+          case Seq(entity, disambig_term, text) =>
+            Row(
+              entity = entity,
+              disambig_term = disambig_term,
+              text = text,
+              url = "",
+              articleName = None)
+        }.toList
+
+    }
+  }
+  def getEnrichedData(saveName: String, rows: Iterator[Row]) = {
     val withLabel = rows.flatMap(enrichRow)
     val saveData = withLabel.map {
       case (term, row, label) =>
         Seq(row.entity, row.disambig_term, row.text, term, row.articleName.getOrElse(null), label)
     }
-    Data.writeCsv(Data.pathOf("labeledTrain.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label")(saveData)
+    Data.writeCsv(Data.pathOf(saveName))("entity", "disambig_term", "text", "article_name", "real_article", "label")(saveData)
   }
 
-  case class Sample(entity: String, disambig_term: String, text: String, article_name: String)
-  // def extractWordHist(sample: Sample) = {
-  //   val removeTerms = Set(sample.entity, sample.disambig_term)
-  //   val wikiText = wikiTextShort(sample.article_name)
-  //   val scentenseWords = createHist(importantWords(sample.text).map(_.toLowerCase), removeTerms)
+  case class Sample(entity: String, disambig_term: String, text: String, article_name: String, wikiText: Option[String])
+  def extractWordHist(sample: Sample) = {
+    val removeTerms = Set(sample.entity, sample.disambig_term)
+    val wikiText = sample.wikiText
+    val scentenseWords = createHist(importantWords(sample.text).map(_.toLowerCase), removeTerms)
 
-  //   val sents = wikiText.map(sentences(_).toSeq).getOrElse(Seq.empty)
-  //   val wikiWords = createHist(sents.flatMap(importantWords), removeTerms)
-  //   (scentenseWords, wikiWords)
-  // }
+    val sents = wikiText.map(sentences(_).toSeq).getOrElse(Seq.empty)
+    val wikiWords = createHist(sents.flatMap(importantWords), removeTerms)
+    (scentenseWords, wikiWords)
+  }
 
   case class LabaledTrain(entity: String, disambig_term: String, text: String, article_name: String, real_article: Option[String], label: Boolean)
 
-  lazy val labeledData = Data.extractCsv(Data.pathOf("labeledTrain.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label") {
+  def labeledData(file: String = "labeledTrain.csv") = Data.extractCsv(Data.pathOf(file))("entity", "disambig_term", "text", "article_name", "real_article", "label") {
     it =>
       it.map {
         case Seq(entity, disambig_term, text, article_name, real_article, label) =>
@@ -180,6 +196,13 @@ object DataHack {
       }.toList
   }
 
+  lazy val labeledWithWiki = Data.extractCsv(Data.pathOf("labeled_wiki_text.csv"))("entity", "disambig_term", "text", "article_name", "real_article", "label", "wikiText") {
+    it =>
+      it.map {
+        case Seq(entity, disambig_term, text, article_name, real_article, label, wikiText) =>
+          LabaledTrain(entity, disambig_term, text, article_name, Option(real_article), label.toBoolean) -> Option(wikiText)
+      }.toList
+  }
   def createHist(words: Seq[String], removeTerms: Set[String]) = {
     words.
       groupBy(identity).
